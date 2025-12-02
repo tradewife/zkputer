@@ -1,0 +1,16 @@
+{
+  "account_address": "0xYOUR_WALLET_ADDRESS",
+  "api_key": "YOUR_API_KEY",
+  "stark_public_key": "0xYOUR_STARK_PUBLIC_KEY",
+  "stark_private_key": "0xYOUR_STARK_PRIVATE_KEY",
+  "vault_number": 123456,
+  "testnet": false,
+  "max_risk_percent": 0.20,
+  "leverage_min": 9,
+  "leverage_max": 12,
+  "max_positions": 2,
+  "default_slippage": 0.05,
+  "account_balance": 100.0,
+  "risk_per_trade": 0.12,
+  "notes": "Example configuration"
+}

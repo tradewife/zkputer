@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+venv_*/
+.env
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environments
+.env
+.env.*
+!.env.example
+BaseOPS/⚙️ Configuration/config/.env
+
+# Configuration & Secrets
+api_keys.json
+wallet.json
+*.pem
+*.key
+secrets.json
+config/api_keys.json
+config/wallet.json
+trading_config.json
+config/trading_config.json
+**/*trading_config.json
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/

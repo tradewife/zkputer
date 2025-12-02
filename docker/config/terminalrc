@@ -1,0 +1,8 @@
+[Configuration]
+FontName=DejaVu Sans Mono 10
+ColorForeground=#00ff00
+ColorBackground=#000000
+ColorCursor=#00ff00
+ScrollingBar=TerminalScrollbarNone
+TitleMode=TerminalTitleReplace
+TitleInitial=ZKputer Terminal

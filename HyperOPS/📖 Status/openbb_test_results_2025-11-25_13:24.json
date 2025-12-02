@@ -1,0 +1,17 @@
+{
+  "DFF": {
+    "name": "Federal Funds Rate",
+    "error": "\n[Error] -> Provider fallback failed.\n[Providers]\n  * 'fred' -> missing credentials\n  * 'intrinio' -> missing credentials",
+    "status": "\u274c ERROR"
+  },
+  "T10Y2Y": {
+    "name": "10Y-2Y Treasury Yield Spread",
+    "error": "\n[Error] -> Provider fallback failed.\n[Providers]\n  * 'fred' -> missing credentials\n  * 'intrinio' -> missing credentials",
+    "status": "\u274c ERROR"
+  },
+  "VIXCLS": {
+    "name": "VIX (Market Volatility)",
+    "error": "\n[Error] -> Provider fallback failed.\n[Providers]\n  * 'fred' -> missing credentials\n  * 'intrinio' -> missing credentials",
+    "status": "\u274c ERROR"
+  }
+}

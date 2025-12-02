@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  zkputer:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile
+    container_name: zkputer_core
+    ports:
+      - "6080:6080" # noVNC Web Access
+      - "5900:5900" # Direct VNC Access (Optional)
+    volumes:
+      - ./src:/home/zkputer/src # Mount source code for live editing
+      - ./research_logs:/home/zkputer/research_logs # Persist logs
+    restart: unless-stopped
+    shm_size: '2gb' # Prevent Chromium crashes
