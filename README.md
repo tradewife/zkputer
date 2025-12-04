@@ -1,6 +1,6 @@
-# ZKputer: Sovereign Privacy Co-Pilot for Crypto Trading
+# ZKputer: Sovereign Shadow Trader
 
-Institutional workflow that keeps **research, execution, and funding inside a zero-knowledge perimeter**. ZKputer couples browser-native AI pair-programmers with shielded Zcash capital, NEAR AI trusted execution, and NEAR Intents orchestration so every move remains private yet auditable.
+Privacy-first, cross-chain power-up that keeps **research, execution, and funding inside a zero-knowledge perimeter**. ZKputer leverages browser-native AI pair-programmers with shielded Zcash capital, NEAR AI trusted execution, and NEAR Intents orchestration so every move remains private yet auditable.
 
 **Hackathon:** Zypherpunk 2025 | **Focus:** privacy-first trading automation and attestable AI operations.
 
@@ -62,7 +62,84 @@ Institutional workflow that keeps **research, execution, and funding inside a ze
 
 ---
 
-## 5. OPS Modes (Single Source of Truth)
+## 5. Human Commands Reference
+
+**The human has final say on all trades.** AI pair-programmers must wait for explicit commands before executing.
+
+### Starting a Session
+```
+"Check my accounts"                    → Show balances across all exchanges
+"Find me a trade setup"                → Analyze markets and propose a trade
+"What's the market doing?"             → Get live prices and sentiment
+"Show me my positions"                 → Display open positions and PnL
+```
+
+### Trade Approval
+```
+"Execute"                              → Place the proposed trade
+"Execute on Extended"                  → Use Extended Exchange specifically
+"Execute on Hyperliquid"               → Use Hyperliquid specifically
+```
+
+### Trade Modification
+```
+"Make it smaller"                      → Reduce position size
+"Make it bigger"                       → Increase position size
+"Tighter stop"                         → Move stop loss closer to entry
+"Wider stop"                           → Move stop loss further from entry
+"Change TP to $X"                      → Set specific take profit price
+```
+
+### Trade Rejection
+```
+"Cancel"                               → Abort the proposed trade
+"No"                                   → Reject and wait for new instruction
+"Show me ETH instead"                  → Request different asset analysis
+```
+
+### Position Management
+```
+"Close my SOL position"                → Exit specific position
+"Add a stop loss at $X"                → Place stop loss order
+"Move my stop to breakeven"            → Adjust existing stop loss
+"Take profit on half"                  → Partial position exit
+```
+
+### Example Session Flow
+```
+╔══════════════════════════════════════════════════════════════╗
+║  HUMAN: "Check my accounts and find me a good trade"        ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  [✓] Extended    $500.00 equity    0 positions               ║
+║  [✓] Hyperliquid $500.00 equity    0 positions               ║
+║  [✓] Base        Connected         Ready                     ║
+║                                                              ║
+║  LIVE PRICES:  BTC $92,000  ETH $3,100  SOL $140             ║
+║                                                              ║
+║  ┌────────────────────────────────────────────────────────┐  ║
+║  │  RECOMMENDED: LONG SOL @ $140.50                       │  ║
+║  │  Stop Loss:   $136.29 (-3%)                            │  ║
+║  │  Take Profit: $148.93 (+6%)                            │  ║
+║  │  Size: 3.5 SOL ($492)  Risk: $14.74 (3%)               │  ║
+║  └────────────────────────────────────────────────────────┘  ║
+║                                                              ║
+║  AWAITING COMMAND: Execute / Cancel / Modify                 ║
+║                                                              ║
+╠══════════════════════════════════════════════════════════════╣
+║  HUMAN: "Execute"                                            ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  [✓] Order placed: LONG 3.5 SOL @ $140.50                    ║
+║  [✓] Stop loss set: $136.29                                  ║
+║  [✓] Logged to SESSION_LOG.jsonl                             ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+---
+
+## 6. OPS Modes (Single Source of Truth)
 
 | Mode | Venue | Focus | Notes |
 |------|-------|-------|-------|
@@ -75,7 +152,7 @@ All directives live inside `protocols/ops/` and are enforced by `ComplianceOffic
 
 ---
 
-## 6. Zypherpunk Track Coverage
+## 7. Zypherpunk Track Coverage
 
 | Hackathon Tier | Requirement (per zypherpunk.xyz) | ZKputer Capability |
 |----------------|----------------------------------|--------------------|
@@ -85,7 +162,7 @@ All directives live inside `protocols/ops/` and are enforced by `ComplianceOffic
 
 ---
 
-## 7. Demo & Validation
+## 8. Demo & Validation
 
 ```bash
 # 1. Configure environment
@@ -109,16 +186,24 @@ Validation checklist:
 
 ---
 
-## 8. File Map
+## 9. File Map
 
 ```
 ZKputer/
 ├── .zkputer/
-│   ├── AGENT_BOOTSTRAP.md   # mandatory entry brief
+│   ├── AGENT_BOOTSTRAP.md   # READ THIS FIRST - mandatory entry brief
 │   ├── ACTIVE_OPS.json      # current mode + account config
-│   └── SESSION_LOG.jsonl    # append-only audit log
+│   ├── SESSION_LOG.jsonl    # append-only audit log
+│   └── hooks/               # execution hooks
+│       ├── pre_trade.py     # validates trades before execution
+│       └── post_trade.py    # logs results to audit trail
+├── config/exchanges/        # LIVE CREDENTIALS (gitignored)
+│   ├── extended.json        # Extended Exchange API keys
+│   ├── hyperliquid.json     # Hyperliquid API keys
+│   └── base.env             # Coinbase CDP credentials
 ├── protocols/
 │   ├── core/
+│   │   ├── API_EXECUTION.md # master playbook for trade execution
 │   │   ├── MASTER_PROTOCOL.md
 │   │   ├── RISK_LIMITS.json
 │   │   └── COMPLIANCE_SCHEMA.json
@@ -128,20 +213,22 @@ ZKputer/
 │       ├── hyper.md
 │       └── pump.md
 ├── src/core/
+│   ├── exchanges/           # unified trading clients
+│   │   ├── extended_client.py
+│   │   ├── hyperliquid_client.py
+│   │   └── base_client.py
 │   ├── handbook.py          # loader for the protocol spine
 │   ├── compliance.py        # enforcement + schema validation
 │   ├── session_logger.py    # audit channel writer
 │   ├── zcash_wallet.py      # Sapling RPC client
 │   └── near_intents.py      # cross-chain executor
-├── legacy_archive/
-│   └── pre_refactor/ops/ (BaseOPS, ExtendOPS, HyperOPS, PumpOPS)   # archived legacy knowledge graphs
 ├── demo_near_ai.py          # end-to-end routine demo
 └── docker/                  # virtual desktop + calculator launcher
 ```
 
 ---
 
-## 9. Communication Rules for Judges & Reviewers
+## 10. Communication Rules for Judges & Reviewers
 
 - Never expose shielded addresses or viewing keys in plaintext logs. Demonstrations use mocked data unless the judge requests live funds.
 - Calculator gate description is provided here, but the actual PIN is handed over verbally for on-site verification only.

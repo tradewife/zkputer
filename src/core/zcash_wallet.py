@@ -86,7 +86,7 @@ class ZcashRPCClient:
     
     def get_balance(self) -> float:
         """Get total wallet balance"""
-        return self.call("getbalance")
+        return self._call("getbalance")
     
     def get_shielded_balance(self) -> float:
         """Get shielded (z-address) balance"""
