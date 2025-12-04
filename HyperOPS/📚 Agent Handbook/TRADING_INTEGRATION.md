@@ -108,25 +108,6 @@ python hyperops_cli.py emergency-close
 - **Hard Exit**: 22:00 AEST daily
 - **Entry Type**: Limit orders only (passive)
 
-### ⚠️ CRITICAL: Stop Loss Order Types
-
-**NEVER use LIMIT orders for stop losses** - they will execute immediately!
-
-**Problem:**
-- Short position @ $2980, want stop @ $3050
-- Using `order_type="limit"`, `side="buy"`, `price=3050`
-- Limit buy @ $3050 when market is $2980 = "buy at $3050 or BETTER (lower)"
-- **Result:** Order executes IMMEDIATELY at market price instead of waiting for $3050
-
-**Solution:**
-- Use STOP or STOP_LIMIT order types that only trigger when price reaches the specified level
-- For Extended SDK: Check documentation for proper stop order implementation
-- Stop losses for SHORTS: Use stop-buy that triggers when price goes UP
-- Stop losses for LONGS: Use stop-sell that triggers when price goes DOWN
-
-**Implementation Note:**
-Current `trading_module.py` does not implement stop orders correctly. Before placing protective stops, verify the SDK supports stop order types and update the implementation accordingly.
-
 ## Output Files
 
 ### Daily Trading Briefs

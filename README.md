@@ -61,6 +61,20 @@ Zcash Shielded → NEAR AI TEE → NEAR Intents → Multi-Chain Settlement
 **NEAR AI:** Hardware-attested inference (NVIDIA H100 TEEs)  
 **NEAR Intents:** Cross-chain privacy-preserving execution  
 
+### Cypherpunk Access Control
+
+**Disguised calculator interface** - ZKputer directory hidden behind functional calculator GUI:
+
+```bash
+# Launch calculator (looks like normal calculator app)
+python3 zkputer_calculator.py
+
+# Enter secret code: 3-1-4-1-5-9 (π digits)
+# Toggles ZKputer ↔ .ZKputer (visible/hidden)
+```
+
+Privacy by design: Directory access requires secret knowledge, no obvious security UI.  
+
 ## Technical Implementation
 
 ### Core Components

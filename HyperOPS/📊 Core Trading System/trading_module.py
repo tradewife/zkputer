@@ -1,26 +1,24 @@
 """
-ExtendedOPS Trading Module
-Integration with Extended Python SDK for automated trading
+HyperOPS Trading Module
+Integration with Hyperliquid Python SDK for automated trading
 """
 
 import json
 import os
-import asyncio
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from decimal import Decimal
 import logging
 
 try:
-    from x10.perpetual.accounts import StarkPerpetualAccount
-    from x10.perpetual.trading_client import PerpetualTradingClient
-    from x10.perpetual.configuration import MAINNET_CONFIG, TESTNET_CONFIG
-    from x10.perpetual.orders import OrderSide, OrderType, TimeInForce, OrderTpslType, OrderTriggerPriceType, OrderPriceType
-    from x10.perpetual.order_object import OrderTpslTriggerParam
+    from hyperliquid.info import Info
+    from hyperliquid.api import API
+    from hyperliquid.utils import constants
+    from hyperliquid.utils.signing import sign_l1_action, sign_usd_transfer
+    import eth_account
 except ImportError:
     print(
-        "Required packages not found. Install with: pip install x10-python-trading-starknet"
+        "Required packages not found. Install with: pip install hyperliquid-python-sdk eth-account"
     )
     exit(1)
 
@@ -31,13 +29,11 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class TradingConfig:
-    """Configuration for ExtendedOPS trading"""
+    """Configuration for HyperOPS trading"""
 
     account_address: str
-    api_key: str
-    stark_public_key: str
-    stark_private_key: str
-    vault_number: int
+    secret_key: str
+    base_url: str = constants.MAINNET_API_URL
     testnet: bool = False
     max_risk_percent: float = 0.20  # 20% max risk per trade
     leverage_min: int = 9
@@ -53,31 +49,20 @@ class TradingConfig:
         with open(config_path, "r") as f:
             config_data = json.load(f)
 
-        # Filter to only valid TradingConfig fields
-        valid_fields = {
-            "account_address", "api_key", "stark_public_key", "stark_private_key",
-            "vault_number", "testnet", "max_risk_percent", "leverage_min",
-            "leverage_max", "max_positions"
-        }
-        filtered_config = {k: v for k, v in config_data.items() if k in valid_fields}
-        
-        return cls(**filtered_config)
-
+        return cls(**config_data)
 
 
 @dataclass
 class OrderSpec:
     """Order specification"""
 
-    symbol: str  # Format: "BTC-USD"
+    symbol: str
     side: str  # "buy" or "sell"
-    order_type: str  # "limit", "market", "stop_loss", "take_profit"
+    order_type: str  # "limit", "market"
     size: float
     price: Optional[float] = None
     reduce_only: bool = False
-    post_only: bool = False
-    take_profit_price: Optional[float] = None
-    stop_loss_price: Optional[float] = None
+    time_in_force: str = "gtc"  # good till cancelled
 
 
 @dataclass
@@ -94,135 +79,117 @@ class Position:
     margin_used: float
 
 
-class ExtendedTrader:
-    """Main trading class for ExtendedOPS"""
+class HyperliquidTrader:
+    """Main trading class for HyperOPS"""
 
     def __init__(self, config: TradingConfig):
         self.config = config
-        self.trading_client = None
-        self.stark_account = None
-        
-        # Initialize in async context
-        logger.info(f"Initialized trader for vault: {config.vault_number}")
+        self.base_url = (
+            constants.TESTNET_API_URL if config.testnet else constants.MAINNET_API_URL
+        )
 
-    async def initialize(self):
-        """Initialize Extended trading client (async)"""
-        try:
-            # Create Stark account
-            self.stark_account = StarkPerpetualAccount(
-                vault=self.config.vault_number,
-                private_key=self.config.stark_private_key,
-                public_key=self.config.stark_public_key,
-                api_key=self.config.api_key,
+        # Initialize API clients
+        self.info = Info(self.base_url, skip_ws=True)
+        self.api = API(self.base_url)
+
+        # Setup account
+        self.account = eth_account.Account.from_key(config.secret_key)
+        self.address = self.account.address
+
+        # Verify address matches config
+        if self.address.lower() != config.account_address.lower():
+            raise ValueError(
+                f"Address mismatch: derived {self.address} != config {config.account_address}"
             )
 
-            # Create trading client (direct constructor, not .create())
-            config = TESTNET_CONFIG if self.config.testnet else MAINNET_CONFIG
-            self.trading_client = PerpetualTradingClient(
-                config, self.stark_account
-            )
+        logger.info(f"Initialized trader for address: {self.address}")
 
-            logger.info(f"Extended client initialized for vault {self.config.vault_number}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to initialize Extended client: {e}")
-            import traceback
-            traceback.print_exc()
-            return False
-
-    async def cleanup(self):
-        """Cleanup Extended client connections"""
-        try:
-            if self.trading_client:
-                await self.trading_client.close()
-                logger.info("Extended client closed")
-        except Exception as e:
-            logger.error(f"Error during cleanup: {e}")
-
-    async def get_account_state(self) -> Dict:
+    def get_account_state(self) -> Dict:
         """Get current account state"""
         try:
-            balance = await self.trading_client.account.get_balance()
-            return {
-                "equity": float(balance.data.equity),
-                "available_balance": float(balance.data.available_for_trade),
-                "margin_usage": float(balance.data.margin_ratio) if balance.data.margin_ratio else 0.0,
-            }
+            return self.info.user_state(self.address)
         except Exception as e:
             logger.error(f"Failed to get account state: {e}")
-            import traceback
-            traceback.print_exc()
             return {}
 
-    async def get_positions(self) -> List[Position]:
+    def get_positions(self) -> List[Position]:
         """Get current positions"""
         try:
-            positions_response = await self.trading_client.account.get_positions()
+            account_state = self.get_account_state()
             positions = []
 
-            # Extended returns WrappedApiResponse with .data attribute
-            for pos in positions_response.data:
-                positions.append(
-                    Position(
-                        symbol=pos.market,
-                        size=float(pos.size),
-                        side="long" if (pos.side.value if hasattr(pos.side, 'value') else pos.side) == "LONG" else "short",
-                        entry_price=float(pos.open_price),
-                        mark_price=float(pos.mark_price),
-                        unrealized_pnl=float(pos.unrealised_pnl),
-                        leverage=int(float(pos.leverage)),
-                        margin_used=float(pos.value) / float(pos.leverage) if float(pos.leverage) > 0 else 0,
-                    )
-                )
+            if "assetPositions" in account_state:
+                for pos_data in account_state["assetPositions"]:
+                    if float(pos_data["position"]["szi"]) != 0:  # Non-zero position
+                        position = pos_data["position"]
+                        coin = position["coin"]
+
+                        positions.append(
+                            Position(
+                                symbol=coin,
+                                size=float(position["szi"]),
+                                side="long" if float(position["szi"]) > 0 else "short",
+                                entry_price=float(position["entryPx"]),
+                                mark_price=float(position["positionValue"])
+                                / abs(float(position["szi"])),
+                                unrealized_pnl=float(position["unrealizedPnl"]),
+                                leverage=int(position["leverage"]["value"]),
+                                margin_used=float(position["marginUsed"]),
+                            )
+                        )
 
             return positions
         except Exception as e:
             logger.error(f"Failed to get positions: {e}")
-            import traceback
-            traceback.print_exc()
             return []
 
-    async def get_market_data(self, symbols: List[str] = None) -> Dict:
+    def get_market_data(self, symbols: List[str] = None) -> Dict:
         """Get market data for specified symbols"""
         try:
-            markets = await self.trading_client.markets_info.get_markets()
-            
+            all_meta = self.info.meta()
+            if not symbols:
+                symbols = [asset["name"] for asset in all_meta["universe"]]
+
             market_data = {}
-            for market in markets.data:
-                market_name = market.name
-                if symbols is None or market_name in symbols:
-                    # Extended has market data in market_stats
-                    stats = market.market_stats if hasattr(market, 'market_stats') else None
-                    
-                    market_data[market_name] = {
-                        "symbol": market_name,
-                        "mark_price": float(stats.mark_price) if stats else None,
-                        "index_price": float(stats.index_price) if stats else None,
-                        "funding_rate": float(stats.funding_rate) if stats else None,
-                        "daily_volume": float(stats.daily_volume) if stats else None,
-                        "open_interest": float(stats.open_interest) if stats else None,
-                        "last_price": float(stats.last_price) if stats else None,
-                        "active": market.active if hasattr(market, 'active') else True,
+            for symbol in symbols:
+                # Find asset metadata
+                asset_meta = next(
+                    (
+                        asset
+                        for asset in all_meta["universe"]
+                        if asset["name"] == symbol
+                    ),
+                    None,
+                )
+                if asset_meta:
+                    # Get current funding and OI
+                    funding = self.info.funding_history(symbol)
+                    oi = self.info.open_interest(symbol)
+
+                    market_data[symbol] = {
+                        "meta": asset_meta,
+                        "funding": funding[-1] if funding else None,
+                        "open_interest": oi,
+                        "mark_price": asset_meta.get("markPrice", 0),
+                        "index_price": asset_meta.get("indexPrice", 0),
                     }
 
             return market_data
         except Exception as e:
             logger.error(f"Failed to get market data: {e}")
-            import traceback
-            traceback.print_exc()
             return {}
 
-    async def calculate_position_size(
+    def calculate_position_size(
         self, symbol: str, entry_price: float, stop_price: float
     ) -> float:
         """Calculate position size based on risk management rules"""
         try:
-            account_state = await self.get_account_state()
-            if not account_state:
+            account_state = self.get_account_state()
+            if not account_state or "marginSummary" not in account_state:
                 logger.error("Cannot get account equity for position sizing")
                 return 0.0
 
-            equity = account_state["equity"]
+            equity = float(account_state["marginSummary"]["accountValue"])
             risk_usd = equity * self.config.max_risk_percent
 
             # Calculate stop distance
@@ -234,8 +201,19 @@ class ExtendedTrader:
             # Calculate raw size
             raw_size = risk_usd / stop_distance
 
-            # Round down to reasonable precision (Extended handles lot size internally)
-            rounded_size = round(raw_size, 4)
+            # Get asset metadata for rounding
+            meta = self.info.meta()
+            asset_meta = next(
+                (asset for asset in meta["universe"] if asset["name"] == symbol), None
+            )
+            if not asset_meta:
+                logger.error(f"Cannot find metadata for {symbol}")
+                return 0.0
+
+            # Round down to lot size
+            sz_decimals = asset_meta.get("szDecimals", 6)
+            lot_size = 10 ** (-sz_decimals)
+            rounded_size = int(raw_size / lot_size) * lot_size
 
             # Verify leverage constraints
             notional = rounded_size * entry_price
@@ -244,7 +222,7 @@ class ExtendedTrader:
             if notional > max_notional:
                 # Adjust size to meet leverage constraint
                 rounded_size = max_notional / entry_price
-                rounded_size = round(rounded_size, 4)
+                rounded_size = int(rounded_size / lot_size) * lot_size
 
             logger.info(
                 f"Position sizing: equity={equity:.2f}, risk={risk_usd:.2f}, size={rounded_size}"
@@ -255,144 +233,69 @@ class ExtendedTrader:
             logger.error(f"Failed to calculate position size: {e}")
             return 0.0
 
-    async def place_order(self, order: OrderSpec) -> Dict:
+    def place_order(self, order: OrderSpec) -> Dict:
         """Place an order"""
         try:
-            # Convert side to OrderSide enum
-            side = OrderSide.BUY if order.side.lower() == "buy" else OrderSide.SELL
+            # Create order dictionary
+            order_dict = {
+                "coin": order.symbol,
+                "side": order.side,
+                "orderType": order.order_type,
+                "sz": str(order.size),
+                "reduceOnly": order.reduce_only,
+                "timeInForce": order.time_in_force,
+            }
 
-            # Convert order type
-            # Convert order type
-            if order.order_type.lower() == "market":
-                time_in_force = TimeInForce.IOC
-                order_type_enum = OrderType.MARKET
-            elif order.order_type.lower() in ["stop_loss", "take_profit"]:
-                time_in_force = TimeInForce.GTT
-                order_type_enum = OrderType.TPSL
-            else:
-                time_in_force = TimeInForce.GTT
-                order_type_enum = OrderType.LIMIT
+            if order.price:
+                order_dict["limitPx"] = str(order.price)
 
-            # Configure TP/SL if provided
-            tp_param = None
-            sl_param = None
-            tp_sl_type = None
-
-            if order.take_profit_price or order.stop_loss_price or order.order_type.lower() in ["stop_loss", "take_profit"]:
-                tp_sl_type = OrderTpslType.ORDER
-                
-                # Determine slippage direction based on main order side
-                # If BUY, TP/SL are SELL. If SELL, TP/SL are BUY.
-                is_buy = side == OrderSide.BUY
-                
-                # Handle standalone TP/SL orders where price might be in order.price
-                trigger_price_tp = order.take_profit_price
-                trigger_price_sl = order.stop_loss_price
-                
-                if order.order_type.lower() == "take_profit" and not trigger_price_tp:
-                    trigger_price_tp = order.price
-                    
-                if order.order_type.lower() == "stop_loss" and not trigger_price_sl:
-                    trigger_price_sl = order.price
-
-                if trigger_price_tp:
-                    # TP Limit Price:
-                    # If Main BUY -> TP SELL. Trigger > Entry. Limit should be <= Trigger (usually just Trigger).
-                    # If Main SELL -> TP BUY. Trigger < Entry. Limit should be >= Trigger.
-                    # To ensure fill, we can use a slight buffer or just the trigger price.
-                    # Let's use 1% slippage for TP to ensure fill upon trigger.
-                    tp_limit_price = Decimal(str(trigger_price_tp)) * (Decimal("0.99") if is_buy else Decimal("1.01"))
-                    
-                    tp_param = OrderTpslTriggerParam(
-                        trigger_price=Decimal(str(trigger_price_tp)),
-                        trigger_price_type=OrderTriggerPriceType.MARK,
-                        price=tp_limit_price,
-                        price_type=OrderPriceType.LIMIT
-                    )
-                
-                if trigger_price_sl:
-                    # SL Limit Price:
-                    # If Main BUY -> SL SELL. Trigger < Entry. Limit should be < Trigger (Market-like).
-                    # If Main SELL -> SL BUY. Trigger > Entry. Limit should be > Trigger (Market-like).
-                    # Use 5% slippage to ensure stop fill.
-                    sl_limit_price = Decimal(str(trigger_price_sl)) * (Decimal("0.95") if is_buy else Decimal("1.05"))
-                    
-                    sl_param = OrderTpslTriggerParam(
-                        trigger_price=Decimal(str(trigger_price_sl)),
-                        trigger_price_type=OrderTriggerPriceType.MARK,
-                        price=sl_limit_price,
-                        price_type=OrderPriceType.LIMIT
-                    )
+            # Sign the order
+            signature = sign_l1_action(self.account, "order", order_dict, self.base_url)
 
             # Place the order
-            placed_order = await self.trading_client.place_order(
-                market_name=order.symbol,
-                amount_of_synthetic=Decimal(str(order.size)),
-                price=Decimal(str(order.price)) if order.price and order_type_enum != OrderType.TPSL else Decimal("0"),
-                side=side,
-                time_in_force=time_in_force,
-                reduce_only=order.reduce_only,
-                post_only=order.post_only,
-                tp_sl_type=tp_sl_type,
-                take_profit=tp_param,
-                stop_loss=sl_param
-            )
+            result = self.api.post_order(order_dict, signature)
 
             logger.info(
-                f"Order placed: {order.symbol} {order.side} {order.size} @ {order.price} | ID: {placed_order.data.id}"
+                f"Order placed: {order.symbol} {order.side} {order.size} @ {order.price}"
             )
-            return {
-                "status": "ok",
-                "order_id": placed_order.data.id,
-                "symbol": order.symbol,
-                "side": order.side,
-                "size": order.size,
-                "price": order.price,
-            }
+            return result
 
         except Exception as e:
             logger.error(f"Failed to place order: {e}")
-            return {"status": "error", "error": str(e), "symbol": order.symbol}
+            return {"status": "error", "error": str(e)}
 
-    async def cancel_order(self, order_id: int) -> Dict:
+    def cancel_order(self, order_id: str, symbol: str) -> Dict:
         """Cancel an order"""
         try:
-            await self.trading_client.orders.cancel_order(order_id=order_id)
-            logger.info(f"Order cancelled: {order_id}")
-            return {"status": "ok", "order_id": order_id}
+            cancel_dict = {"coin": symbol, "oid": order_id}
+
+            signature = sign_l1_action(
+                self.account, "cancel", cancel_dict, self.base_url
+            )
+
+            result = self.api.cancel_order(cancel_dict, signature)
+            logger.info(f"Order cancelled: {order_id} for {symbol}")
+            return result
 
         except Exception as e:
             logger.error(f"Failed to cancel order: {e}")
             return {"status": "error", "error": str(e)}
 
-    async def get_open_orders(self, symbol: str = None) -> List[Dict]:
+    def get_open_orders(self, symbol: str = None) -> List[Dict]:
         """Get open orders"""
         try:
-            orders_response = await self.trading_client.account.get_open_orders(
-                market_names=[symbol] if symbol else None
-            )
-            
-            orders = []
-            for order in orders_response.data:
-                orders.append({
-                    "id": order.id,
-                    "symbol": order.market,
-                    "side": order.side.value.lower() if hasattr(order.side, 'value') else str(order.side).lower(),
-                    "type": order.type.value.lower() if hasattr(order.type, 'value') else str(order.type).lower(),
-                    "price": float(order.price),
-                    "size": float(order.qty),
-                    "filled": float(order.filled_qty) if order.filled_qty else 0,
-                })
-            
+            orders = self.info.open_orders(self.address)
+            if symbol:
+                orders = [order for order in orders if order["coin"] == symbol]
             return orders
         except Exception as e:
             logger.error(f"Failed to get open orders: {e}")
             return []
 
-    async def close_all_positions(self) -> List[Dict]:
+    def close_all_positions(self) -> List[Dict]:
         """Close all positions (emergency function)"""
         try:
-            positions = await self.get_positions()
+            positions = self.get_positions()
             results = []
 
             for position in positions:
@@ -402,11 +305,10 @@ class ExtendedTrader:
                     side="sell" if position.side == "long" else "buy",
                     order_type="market",
                     size=abs(position.size),
-                    price=position.mark_price,  # Reference price for IOC
                     reduce_only=True,
                 )
 
-                result = await self.place_order(close_order)
+                result = self.place_order(close_order)
                 results.append(result)
 
             return results
@@ -420,15 +322,13 @@ def create_sample_config():
     """Create a sample configuration file"""
     sample_config = {
         "account_address": "0xYOUR_WALLET_ADDRESS",
-        "api_key": "your_api_key_from_extended_ui",
-        "stark_public_key": "your_stark_public_key",
-        "stark_private_key": "your_stark_private_key",
-        "vault_number": 0,
-        "testnet": False,
+        "secret_key": "your_private_key_here",
+        "testnet": True,
         "max_risk_percent": 0.20,
         "leverage_min": 9,
         "leverage_max": 12,
         "max_positions": 2,
+        "hard_exit_time": "22:00",
     }
 
     os.makedirs("config", exist_ok=True)
@@ -436,7 +336,7 @@ def create_sample_config():
         json.dump(sample_config, f, indent=2)
 
     print("Sample config created at config/trading_config.json.example")
-    print("Get your credentials from: https://app.extended.exchange/api-management")
+    print("Edit this file with your credentials and rename to trading_config.json")
 
 
 if __name__ == "__main__":

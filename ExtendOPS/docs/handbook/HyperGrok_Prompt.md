@@ -1,17 +1,17 @@
-# HyperGrok — HYPERLIQUID ALPHA MINING PROMPT FOR GROK
-**Optimized for Grok with X Integration and Real-Time Trading**
+# HyperGrok — EXTENDED ALPHA MINING PROMPT FOR GROK
+**Optimized for Grok with X Integration and Real-Time Browser-Based Intel**
 
 ---
 
 ## 🎯 OBJECTIVE
-Execute ultra-intelligent, thesis-driven trading on Hyperliquid USDC perpetuals using Grok's X integration and real-time data mining capabilities.
+Execute ultra-intelligent, thesis-driven trading on Extended USDC perpetuals using Grok's X integration and real-time browser-based data mining capabilities.
 
 **Account Parameters:**
 - Size: $100 USDC
 - Max Risk: 20% per trade ($20)
 - Leverage: 9-12×
 - Hard Exit: 22:00 AEST tomorrow
-- Universe: BTC, ETH, SOL + top 5 trending Hyperliquid markets
+- Universe: BTC-USD, ETH-USD, SOL-USD + top 5 trending Extended markets
 
 ---
 
@@ -48,14 +48,22 @@ Execute ultra-intelligent, thesis-driven trading on Hyperliquid USDC perpetuals 
 - **Official Docs** - Instrument specs, fee schedules, trading rules
 - **Trade Feed** - Real-time prints, large transactions
 
-### TIER 2: WHALE INTEL (Alpha Sources)
-- **Dextrabot Whale Trades** - https://app.dextrabot.com/hyperliquid-whale-trades
+### TIER 2: WHALE INTEL (Alpha Sources - **BROWSER REQUIRED**)
+- **Dextrabot Whale Trades** - **USE BROWSER** https://app.dextrabot.com/hyperliquid-whale-trades
   - Large prints >$50K notional
   - Smart wallet clustering and labeling
   - Real-time trade flow analysis
-- **Dextrabot Discover** - Performance-ranked wallets and vaults
-- **ApexLiquid TopTraders** - Highest PnL traders leaderboard
-- **SuperX Analytics** - Trader screener and vault performance
+  - **CRITICAL**: Manual browser navigation required, capture screenshots
+- **Dextrabot Discover** - **USE BROWSER** for performance-ranked wallets and vaults
+- **ApexLiquid TopTraders** - **USE BROWSER** for highest PnL traders leaderboard
+- **SuperX Analytics** - **USE BROWSER** for trader screener and vault performance
+
+**WHALE INTEL PROTOCOL**:
+1. Open browser to each platform in order
+2. Capture screenshots of relevant whale activity
+3. Note timestamps, wallet addresses, trade sizes
+4. Cross-reference with Extended market movements
+5. **NEVER use generic web searches as substitute**
 
 ### TIER 3: ON-CHAIN ANALYTICS
 - **Dune Analytics** - Custom Hyperliquid queries, flow analysis
