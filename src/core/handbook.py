@@ -29,14 +29,26 @@ class HandbookLoader:
         self.ops_protocol_path = self.protocols_dir / "ops" / f"{mode_map[mode]}.md"
         
         # LEGACY: Strategy-specific handbook paths (fallback)
+        legacy_relative = None
         if mode == "BaseOPS":
-            self.handbook_dir = self.base_path / "BaseOPS" / "📚 Agent Handbook"
+            legacy_relative = ["BaseOPS", "📚 Agent Handbook"]
         elif mode == "HyperOPS":
-            self.handbook_dir = self.base_path / "HyperOPS" / "📚 Agent Handbook"
+            legacy_relative = ["HyperOPS", "📚 Agent Handbook"]
         elif mode == "ExtendOPS":
-            self.handbook_dir = self.base_path / "ExtendOPS" / "docs" / "handbook"
+            legacy_relative = ["ExtendOPS", "docs", "handbook"]
         elif mode == "PumpOPS":
-            self.handbook_dir = self.base_path / "PumpOPS" / "📚 Agent Handbook"
+            legacy_relative = ["PumpOPS", "📚 Agent Handbook"]
+
+        self.handbook_dir = self.base_path.joinpath(*legacy_relative)
+
+        # If legacy assets have been archived, point to the archive copy automatically
+        self.legacy_archive_base = self.base_path / "legacy_archive" / "pre_refactor"
+        archive_candidate = self.legacy_archive_base / "ops"
+        if legacy_relative:
+            archive_candidate = archive_candidate.joinpath(*legacy_relative)
+
+        if not self.handbook_dir.exists() and archive_candidate.exists():
+            self.handbook_dir = archive_candidate
         
         # Check for new protocol structure first
         self.use_new_protocols = self.protocols_dir.exists() and self.core_protocol_path.exists()

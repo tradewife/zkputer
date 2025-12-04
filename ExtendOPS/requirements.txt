@@ -1,4 +1,0 @@
-x10-python-trading-starknet
-aiohttp
-requests
-python-dotenv

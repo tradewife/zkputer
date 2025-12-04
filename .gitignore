@@ -17,6 +17,7 @@ pip-delete-this-directory.txt
 .env.*
 !.env.example
 BaseOPS/⚙️ Configuration/config/.env
+legacy_archive/pre_refactor/ops/BaseOPS/⚙️ Configuration/config/.env
 
 # Configuration & Secrets
 api_keys.json
@@ -29,6 +30,11 @@ config/wallet.json
 trading_config.json
 config/trading_config.json
 **/*trading_config.json
+
+# Exchange configs (LIVE CREDENTIALS)
+config/exchanges/*.json
+config/exchanges/*.env
+!config/exchanges/README.md
 
 # IDEs
 .vscode/
@@ -43,3 +49,4 @@ Thumbs.db
 # Logs
 *.log
 logs/
+.directory
