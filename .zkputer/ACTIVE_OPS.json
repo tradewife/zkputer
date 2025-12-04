@@ -1,0 +1,39 @@
+{
+  "active_mode": "ExtendOPS",
+  "last_updated": "2025-12-04T00:00:00Z",
+  "account": {
+    "equity_usd": 100,
+    "max_risk_percent": 20,
+    "max_leverage": 12,
+    "max_positions": 2
+  },
+  "config_paths": {
+    "BaseOPS": "ops/BaseOPS/config.json",
+    "ExtendOPS": "ops/ExtendOPS/config/trading_config.json",
+    "HyperOPS": "ops/HyperOPS/config/trading_config.json",
+    "PumpOPS": "ops/PumpOPS/config/trading_config.json"
+  },
+  "protocol_paths": {
+    "core": "protocols/core/MASTER_PROTOCOL.md",
+    "BaseOPS": "protocols/ops/base.md",
+    "ExtendOPS": "protocols/ops/extend.md",
+    "HyperOPS": "protocols/ops/hyper.md",
+    "PumpOPS": "protocols/ops/pump.md"
+  },
+  "integrations": {
+    "zcash": {
+      "enabled": false,
+      "wallet_path": "integrations/zcash/wallet.py",
+      "note": "Enable for privacy-preserving cross-chain trades"
+    },
+    "near_intents": {
+      "enabled": false,
+      "client_path": "integrations/near_intents/client.py",
+      "api_url": "https://1click.chaindefuser.com"
+    }
+  },
+  "session": {
+    "log_path": ".zkputer/SESSION_LOG.jsonl",
+    "auto_log": true
+  }
+}

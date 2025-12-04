@@ -1,127 +1,172 @@
-"""
-Handbook Loader - Programmatic Protocol Enforcement
-Ensures any agent (human or AI) follows the exact instructions from handbook files.
-"""
-import os
 from pathlib import Path
+import json
+import logging
 
 class HandbookLoader:
+    """
+    Loads strategy-specific handbooks for AI agents.
+    Supports BaseOPS, HyperOPS, ExtendOPS, and PumpOPS.
+    
+    NEW: Uses consolidated protocols from /protocols/ directory.
+    Falls back to legacy handbook locations if protocols not found.
+    """
+    
     def __init__(self, mode="BaseOPS"):
         self.mode = mode
         self.base_path = Path(__file__).parent.parent.parent  # Go up to ZKputer root
+        self.logger = logging.getLogger(f"HandbookLoader-{mode}")
         
+        # NEW: Protocol paths (preferred)
+        self.protocols_dir = self.base_path / "protocols"
+        self.core_protocol_path = self.protocols_dir / "core" / "MASTER_PROTOCOL.md"
+        self.risk_limits_path = self.protocols_dir / "core" / "RISK_LIMITS.json"
+        self.compliance_schema_path = self.protocols_dir / "core" / "COMPLIANCE_SCHEMA.json"
+        
+        # OPS-specific protocol
+        mode_map = {"BaseOPS": "base", "ExtendOPS": "extend", "HyperOPS": "hyper", "PumpOPS": "pump"}
+        if mode not in mode_map:
+            raise ValueError(f"Unknown mode: {mode}. Supported: BaseOPS, HyperOPS, ExtendOPS, PumpOPS")
+        self.ops_protocol_path = self.protocols_dir / "ops" / f"{mode_map[mode]}.md"
+        
+        # LEGACY: Strategy-specific handbook paths (fallback)
         if mode == "BaseOPS":
             self.handbook_dir = self.base_path / "BaseOPS" / "📚 Agent Handbook"
-        else:
+        elif mode == "HyperOPS":
             self.handbook_dir = self.base_path / "HyperOPS" / "📚 Agent Handbook"
+        elif mode == "ExtendOPS":
+            self.handbook_dir = self.base_path / "ExtendOPS" / "docs" / "handbook"
+        elif mode == "PumpOPS":
+            self.handbook_dir = self.base_path / "PumpOPS" / "📚 Agent Handbook"
+        
+        # Check for new protocol structure first
+        self.use_new_protocols = self.protocols_dir.exists() and self.core_protocol_path.exists()
+        
+        if not self.use_new_protocols:
+            # Fall back to legacy
+            if not self.handbook_dir.exists():
+                self.logger.error(f"Handbook directory not found: {self.handbook_dir}")
+                raise FileNotFoundError(f"Handbook directory not found for {mode}: {self.handbook_dir}")
+    
+    def load_file(self, filename):
+        """Load a specific handbook file"""
+        try:
+            file_path = self.handbook_dir / filename
+            if not file_path.exists():
+                self.logger.error(f"Handbook file not found: {file_path}")
+                return f"ERROR: Handbook file not found: {filename}"
+            
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                self.logger.info(f"Loaded handbook file: {filename} ({len(content)} chars)")
+                return content
+        except Exception as e:
+            self.logger.error(f"Error loading handbook file {filename}: {e}")
+            return f"ERROR: Could not load {filename}: {str(e)}"
     
     def read_handbook(self):
-        """
-        Command: 'Read Handbook'
-        Returns the exact files to read per AGENT_INSTRUCTIONS.md
-        """
-        files_to_read = []
-        
-        if self.mode == "BaseOPS":
-            files_to_read = [
-                "AGENT_INSTRUCTIONS.md",
-                "daily_OPS.md",
-                "PROTOCOL_COMPLIANCE.md",
-                "SOURCE_PRIORITY_PROTOCOL.md"
-            ]
-        else:  # HyperOPS
-            files_to_read = [
-                "AGENT_INSTRUCTIONS.md",
-                "daily_OPS.md",
-                "HyperGrok_Prompt.md",
-                "PROTOCOL_COMPLIANCE.md"
-            ]
-        
-        handbook_content = {}
-        for filename in files_to_read:
-            filepath = self.handbook_dir / filename
-            if filepath.exists():
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    handbook_content[filename] = f.read()
-            else:
-                handbook_content[filename] = f"[FILE NOT FOUND: {filepath}]"
-        
-        return handbook_content
+        """Load the main protocol/handbook"""
+        if self.use_new_protocols:
+            return self._load_protocols()
+        return self.load_file("daily_OPS.md")
     
-    def get_daily_routine_steps(self):
-        """
-        Command: 'Run the Daily'
-        Extracts the exact checklist from daily_OPS.md Part B
-        """
-        daily_ops_path = self.handbook_dir / "daily_OPS.md"
+    def _load_protocols(self):
+        """Load from new protocol structure"""
+        result = {}
         
-        if not daily_ops_path.exists():
-            return ["ERROR: daily_OPS.md not found"]
+        # Core protocol
+        if self.core_protocol_path.exists():
+            with open(self.core_protocol_path, 'r') as f:
+                result["MASTER_PROTOCOL.md"] = f.read()
         
-        with open(daily_ops_path, 'r', encoding='utf-8') as f:
-            content = f.read()
+        # OPS-specific protocol
+        if self.ops_protocol_path.exists():
+            with open(self.ops_protocol_path, 'r') as f:
+                result[f"{self.mode}_protocol.md"] = f.read()
         
-        # Extract Part B: Daily Routine section
-        if self.mode == "BaseOPS":
-            # Find "# PART B: DAILY ROUTINE" section
-            if "# PART B: DAILY ROUTINE" in content:
-                part_b = content.split("# PART B: DAILY ROUTINE")[1]
-                return self._extract_phases(part_b)
-        else:
-            # HyperOPS
-            if "# PART B: DAILY ROUTINE" in content:
-                part_b = content.split("# PART B: DAILY ROUTINE")[1]
-                return self._extract_phases(part_b)
-        
-        return ["ERROR: Could not parse daily routine"]
+        return result
     
-    def _extract_phases(self, text):
-        """Extract phase headers from daily routine"""
-        phases = []
-        lines = text.split('\n')
-        for line in lines:
-            if line.startswith('### Phase'):
-                phases.append(line.strip('# ').strip())
-        return phases
+    def read_agent_instructions(self):
+        """Load agent instructions (bootstrap for new structure)"""
+        if self.use_new_protocols:
+            bootstrap_path = self.base_path / ".zkputer" / "AGENT_BOOTSTRAP.md"
+            if bootstrap_path.exists():
+                with open(bootstrap_path, 'r') as f:
+                    return f.read()
+        return self.load_file("AGENT_INSTRUCTIONS.md")
     
-    def get_compliance_rules(self):
-        """
-        Returns the exact compliance rules from the handbook
-        """
-        if self.mode == "BaseOPS":
-            return {
-                "max_fdv": 4000000,  # From daily_OPS.md line 324
-                "min_liquidity": 50000,  # From daily_OPS.md line 328
-                "min_age_hours": 0,
-                "price_action_reject": "ALREADY PUMPED"  # From daily_OPS.md line 327
+    def read_protocol_compliance(self):
+        """Load protocol compliance rules"""
+        if self.use_new_protocols:
+            return self._load_protocols()
+        return self.load_file("PROTOCOL_COMPLIANCE.md")
+    
+    def read_source_priority(self):
+        """Load source priority protocol"""
+        return self.load_file("SOURCE_PRIORITY_PROTOCOL.md")
+    
+    def get_risk_limits(self):
+        """Load machine-readable risk limits from JSON"""
+        if self.risk_limits_path.exists():
+            with open(self.risk_limits_path, 'r') as f:
+                return json.load(f)
+        # Fallback to hardcoded
+        return {
+            "universal": {
+                "max_risk_per_trade_percent": 20,
+                "max_leverage": 12,
+                "max_concurrent_positions": 2
             }
-        else:  # HyperOPS
-            return {
-                "max_risk_percent": 0.20,  # From daily_OPS.md line 429
-                "max_leverage": 12,  # From daily_OPS.md line 431
-                "account_equity": 100  # From daily_OPS.md line 429
-            }
+        }
     
-    def get_command_mapping(self):
-        """
-        Returns the exact command → action mapping from AGENT_INSTRUCTIONS.md
-        """
-        instructions_path = self.handbook_dir / "AGENT_INSTRUCTIONS.md"
+    def get_compliance_schema(self):
+        """Load the compliance schema for trade validation"""
+        if self.compliance_schema_path.exists():
+            with open(self.compliance_schema_path, 'r') as f:
+                return json.load(f)
+        return None
+    
+    def get_active_config(self):
+        """Load ACTIVE_OPS.json configuration"""
+        config_path = self.base_path / ".zkputer" / "ACTIVE_OPS.json"
+        if config_path.exists():
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        return {"active_mode": self.mode}
+    
+    def get_strategy_config(self):
+        """Get strategy-specific configuration"""
+        config = {
+            "strategy": self.mode,
+            "handbook_path": str(self.handbook_dir),
+            "available_files": []
+        }
         
-        if not instructions_path.exists():
-            return {}
+        try:
+            # List available handbook files
+            for file_path in self.handbook_dir.glob("*.md"):
+                config["available_files"].append(file_path.name)
+        except Exception as e:
+            self.logger.error(f"Error listing handbook files: {e}")
         
-        with open(instructions_path, 'r', encoding='utf-8') as f:
-            content = f.read()
+        return config
+    
+    def validate_handbook(self):
+        """Validate that required handbook files exist"""
+        required_files = ["daily_OPS.md", "AGENT_INSTRUCTIONS.md"]
+        missing_files = []
         
-        # Parse command protocol section
-        commands = {}
-        if "## 🚀 Command Protocol" in content:
-            protocol_section = content.split("## 🚀 Command Protocol")[1]
-            # Extract command names (lines starting with **Command:**)
-            for line in protocol_section.split('\n'):
-                if line.startswith('**Command:**'):
-                    cmd = line.split('**Command:**')[1].strip().strip('"')
-                    commands[cmd] = True
+        for filename in required_files:
+            file_path = self.handbook_dir / filename
+            if not file_path.exists():
+                missing_files.append(filename)
         
-        return commands
+        if missing_files:
+            self.logger.error(f"Missing required handbook files: {missing_files}")
+            return False, missing_files
+        
+        return True, []
+    
+    def switch_mode(self, new_mode):
+        """Switch to a different strategy mode"""
+        self.__init__(new_mode)
+        return f"Switched to {new_mode} mode"

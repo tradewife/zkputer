@@ -1,0 +1,69 @@
+{
+  "$schema": "ZKputer Risk Limits Schema v1.0",
+  "description": "Machine-readable risk constraints for all OPS modes",
+  "universal": {
+    "max_risk_per_trade_percent": 20,
+    "max_leverage": 12,
+    "max_concurrent_positions": 2,
+    "max_correlated_exposure_percent": 40,
+    "stale_order_timeout_minutes": 90,
+    "mae_cut_threshold": 0.6,
+    "mae_cut_window_minutes": 3
+  },
+  "ops_specific": {
+    "BaseOPS": {
+      "max_fdv_usd": 4000000,
+      "min_liquidity_usd": 50000,
+      "min_age_hours": 0,
+      "max_position_size_percent": 10,
+      "scoring_threshold": 15,
+      "notes": "FDV and liquidity are hard limits. New launches allowed if liquidity > $50K"
+    },
+    "ExtendOPS": {
+      "default_account_equity_usd": 100,
+      "preferred_leverage_range": [9, 12],
+      "min_24h_volume_usd": 500000,
+      "min_open_interest_usd": 1000000,
+      "min_orderbook_depth_usd": 50000,
+      "orderbook_depth_percent": 0.5,
+      "entry_type_preference": "LIMIT",
+      "market_order_allowed": true,
+      "notes": "Extended Exchange perpetuals. Symbol format: BTC-USD, ETH-USD"
+    },
+    "HyperOPS": {
+      "default_account_equity_usd": 100,
+      "preferred_leverage_range": [9, 12],
+      "min_24h_volume_usd": 500000,
+      "min_open_interest_usd": 1000000,
+      "min_orderbook_depth_usd": 50000,
+      "orderbook_depth_percent": 0.5,
+      "entry_type_preference": "LIMIT",
+      "market_order_allowed": true,
+      "notes": "Hyperliquid perpetuals. Same rules as ExtendOPS"
+    },
+    "PumpOPS": {
+      "max_position_size_usd": 100,
+      "max_slippage_percent": 5,
+      "rug_detection_enabled": true,
+      "min_liquidity_usd": 10000,
+      "honeypot_check_required": true,
+      "max_tax_percent": 10,
+      "notes": "High-risk Solana sniping. Smaller sizes, strict rug detection"
+    }
+  },
+  "stop_loss_rules": {
+    "required": true,
+    "valid_order_types": ["STOP", "STOP_LIMIT", "STOP_MARKET"],
+    "invalid_order_types": ["LIMIT"],
+    "long_stop_trigger": "price_below_level",
+    "short_stop_trigger": "price_above_level",
+    "min_distance_atr_multiple": 0.8
+  },
+  "take_profit_rules": {
+    "tp1_risk_multiple": [1.5, 2.0],
+    "tp2_risk_multiple": [3.0, 4.0],
+    "tp1_size_percent": 50,
+    "trailing_activation_percent": 70,
+    "trailing_distance_atr_multiple": 0.5
+  }
+}
