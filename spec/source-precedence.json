@@ -1,0 +1,67 @@
+{
+  "version": "0.1.0",
+  "default_policy": {
+    "conflict_resolution": "NON_PROVABLE",
+    "unknown_source_action": "NON_PROVABLE",
+    "unsigned_data_role": "supplementary_only"
+  },
+  "source_kind_order": [
+    "canonical_chain_state",
+    "venue_signed_attestation",
+    "venue_api_unsigned",
+    "third_party_indexer",
+    "agent_local_log"
+  ],
+  "venues": {
+    "hyperliquid": {
+      "order_placed_sources_preferred": [
+        "venue_signed_attestation",
+        "venue_api_unsigned"
+      ],
+      "trade_executed_sources_preferred": [
+        "venue_signed_attestation",
+        "canonical_chain_state",
+        "venue_api_unsigned"
+      ]
+    },
+    "base": {
+      "order_placed_sources_preferred": [
+        "canonical_chain_state",
+        "venue_signed_attestation",
+        "venue_api_unsigned"
+      ],
+      "trade_executed_sources_preferred": [
+        "canonical_chain_state",
+        "venue_signed_attestation",
+        "venue_api_unsigned",
+        "third_party_indexer"
+      ]
+    },
+    "solana": {
+      "order_placed_sources_preferred": [
+        "canonical_chain_state",
+        "venue_signed_attestation",
+        "venue_api_unsigned"
+      ],
+      "trade_executed_sources_preferred": [
+        "canonical_chain_state",
+        "venue_signed_attestation",
+        "venue_api_unsigned",
+        "third_party_indexer"
+      ]
+    },
+    "polymarket": {
+      "order_placed_sources_preferred": [
+        "canonical_chain_state",
+        "venue_signed_attestation",
+        "venue_api_unsigned"
+      ],
+      "trade_executed_sources_preferred": [
+        "canonical_chain_state",
+        "venue_signed_attestation",
+        "venue_api_unsigned",
+        "third_party_indexer"
+      ]
+    }
+  }
+}

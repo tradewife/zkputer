@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "zkputer": {
+      "command": "cargo",
+      "args": [
+        "run",
+        "--manifest-path",
+        "/home/kt/zkputer/Cargo.toml",
+        "--bin",
+        "mcp_server"
+      ],
+      "env": {}
+    }
+  }
+}
