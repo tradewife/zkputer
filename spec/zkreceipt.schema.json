@@ -1,0 +1,323 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zkputer.dev/spec/zkreceipt.schema.json",
+  "title": "ZKReceipt",
+  "description": "Canonical receipt emitted by zkputer proving ORDER_PLACED or TRADE_EXECUTED claims.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt_id",
+    "version",
+    "status",
+    "claim",
+    "subject",
+    "policy",
+    "provenance",
+    "timing",
+    "proof",
+    "integrity"
+  ],
+  "properties": {
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9-]{36}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "PROVED",
+        "NON_PROVABLE",
+        "INVALIDATED"
+      ]
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "statement",
+        "claim_hash"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ORDER_PLACED",
+            "TRADE_EXECUTED"
+          ]
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claim_hash": {
+          "type": "string",
+          "pattern": "^0x[a-f0-9]{64}$"
+        }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "venue",
+        "account_ref",
+        "order_ref"
+      ],
+      "properties": {
+        "venue": {
+          "type": "string",
+          "enum": [
+            "hyperliquid",
+            "base",
+            "solana",
+            "polymarket"
+          ]
+        },
+        "account_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "order_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "execution_ref": {
+          "type": "string"
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "finality_rule_id",
+        "source_precedence_version"
+      ],
+      "properties": {
+        "policy_id": {
+          "type": "string"
+        },
+        "finality_rule_id": {
+          "type": "string"
+        },
+        "source_precedence_version": {
+          "type": "string"
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_root",
+        "evidence_items"
+      ],
+      "properties": {
+        "evidence_root": {
+          "type": "string",
+          "pattern": "^0x[a-f0-9]{64}$"
+        },
+        "evidence_items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source_id",
+              "source_kind",
+              "artifact_ref",
+              "artifact_hash",
+              "observed_at"
+            ],
+            "properties": {
+              "source_id": {
+                "type": "string"
+              },
+              "source_kind": {
+                "type": "string",
+                "enum": [
+                  "canonical_chain_state",
+                  "venue_signed_attestation",
+                  "venue_api_unsigned",
+                  "third_party_indexer",
+                  "agent_local_log"
+                ]
+              },
+              "artifact_ref": {
+                "type": "string"
+              },
+              "artifact_hash": {
+                "type": "string",
+                "pattern": "^0x[a-f0-9]{64}$"
+              },
+              "observed_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      }
+    },
+    "timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "execution_observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finality_observed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "backend",
+        "circuit_id",
+        "circuit_version",
+        "verifier_key_id",
+        "verifier_key_hash",
+        "public_inputs_hash",
+        "verification_mode"
+      ],
+      "properties": {
+        "backend": {
+          "type": "string",
+          "enum": [
+            "SP1",
+            "PICO",
+            "NONE"
+          ]
+        },
+        "circuit_id": {
+          "type": "string"
+        },
+        "circuit_version": {
+          "type": "string"
+        },
+        "verifier_key_id": {
+          "type": "string"
+        },
+        "verifier_key_hash": {
+          "type": "string",
+          "pattern": "^0x[a-f0-9]{64}$"
+        },
+        "public_inputs_hash": {
+          "type": "string",
+          "pattern": "^0x[a-f0-9]{64}$"
+        },
+        "proof_artifact_ref": {
+          "type": "string"
+        },
+        "verification_mode": {
+          "type": "string",
+          "enum": [
+            "OFFCHAIN",
+            "ONCHAIN_ANCHORED",
+            "OFFCHAIN_AND_ANCHORED"
+          ]
+        },
+        "anchored_root_ref": {
+          "type": "string"
+        }
+      }
+    },
+    "non_provable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason_code",
+        "details"
+      ],
+      "properties": {
+        "reason_code": {
+          "type": "string",
+          "enum": [
+            "EVIDENCE_MISSING",
+            "EVIDENCE_CONFLICT",
+            "SOURCE_UNAVAILABLE",
+            "FINALITY_TIMEOUT",
+            "POLICY_VIOLATION",
+            "SCHEMA_INVALID",
+            "UNSUPPORTED_VENUE_CLAIM",
+            "PROOF_FAILURE"
+          ]
+        },
+        "details": {
+          "type": "string"
+        }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_hash",
+        "receipt_hash",
+        "signer",
+        "signature"
+      ],
+      "properties": {
+        "schema_hash": {
+          "type": "string",
+          "pattern": "^0x[a-f0-9]{64}$"
+        },
+        "receipt_hash": {
+          "type": "string",
+          "pattern": "^0x[a-f0-9]{64}$"
+        },
+        "signer": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 64
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "NON_PROVABLE"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "non_provable"
+        ]
+      }
+    }
+  ]
+}

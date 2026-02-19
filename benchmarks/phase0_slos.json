@@ -1,0 +1,28 @@
+{
+  "version": "0.1.0",
+  "objectives": {
+    "execution_path_blocking_latency_ms": 0,
+    "order_placed_proof_completion": {
+      "p95_seconds_max": 8,
+      "p99_seconds_max": 20
+    },
+    "trade_executed_proof_completion": {
+      "p95_seconds_max": 30,
+      "note": "Measured after authoritative finality event for venue."
+    },
+    "non_provable_rate": {
+      "normal_conditions_max": 0.01,
+      "excludes": [
+        "upstream venue outage",
+        "mandatory maintenance windows"
+      ]
+    }
+  },
+  "reporting_dimensions": [
+    "venue",
+    "claim_type",
+    "backend",
+    "verification_mode",
+    "reason_code"
+  ]
+}

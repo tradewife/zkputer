@@ -1,0 +1,113 @@
+{
+  "version": "0.1.0",
+  "scenarios": [
+    {
+      "id": "hl_order_placed",
+      "venue": "hyperliquid",
+      "claim_type": "ORDER_PLACED",
+      "action_template": "perp_limit_order_submit",
+      "evidence_profile": [
+        "order_identity",
+        "submission_timestamp",
+        "venue_acceptance_artifact"
+      ],
+      "target_rate_per_sec": 20,
+      "payload_bytes_target": 4096
+    },
+    {
+      "id": "hl_trade_executed",
+      "venue": "hyperliquid",
+      "claim_type": "TRADE_EXECUTED",
+      "action_template": "perp_fill_event",
+      "evidence_profile": [
+        "order_identity",
+        "execution_identity",
+        "execution_timestamp",
+        "execution_artifact"
+      ],
+      "target_rate_per_sec": 20,
+      "payload_bytes_target": 8192
+    },
+    {
+      "id": "base_order_placed",
+      "venue": "base",
+      "claim_type": "ORDER_PLACED",
+      "action_template": "evm_order_submit",
+      "evidence_profile": [
+        "order_identity",
+        "submission_timestamp",
+        "venue_acceptance_artifact"
+      ],
+      "target_rate_per_sec": 30,
+      "payload_bytes_target": 4096
+    },
+    {
+      "id": "base_trade_executed",
+      "venue": "base",
+      "claim_type": "TRADE_EXECUTED",
+      "action_template": "evm_fill_event",
+      "evidence_profile": [
+        "order_identity",
+        "execution_identity",
+        "execution_timestamp",
+        "execution_artifact"
+      ],
+      "target_rate_per_sec": 30,
+      "payload_bytes_target": 8192
+    },
+    {
+      "id": "sol_order_placed",
+      "venue": "solana",
+      "claim_type": "ORDER_PLACED",
+      "action_template": "sol_order_submit",
+      "evidence_profile": [
+        "order_identity",
+        "submission_timestamp",
+        "venue_acceptance_artifact"
+      ],
+      "target_rate_per_sec": 30,
+      "payload_bytes_target": 4096
+    },
+    {
+      "id": "sol_trade_executed",
+      "venue": "solana",
+      "claim_type": "TRADE_EXECUTED",
+      "action_template": "sol_fill_event",
+      "evidence_profile": [
+        "order_identity",
+        "execution_identity",
+        "execution_timestamp",
+        "execution_artifact"
+      ],
+      "target_rate_per_sec": 30,
+      "payload_bytes_target": 8192
+    },
+    {
+      "id": "poly_order_placed",
+      "venue": "polymarket",
+      "claim_type": "ORDER_PLACED",
+      "action_template": "prediction_order_submit",
+      "evidence_profile": [
+        "order_identity",
+        "submission_timestamp",
+        "venue_acceptance_artifact"
+      ],
+      "target_rate_per_sec": 15,
+      "payload_bytes_target": 4096
+    },
+    {
+      "id": "poly_trade_executed",
+      "venue": "polymarket",
+      "claim_type": "TRADE_EXECUTED",
+      "action_template": "prediction_fill_event",
+      "evidence_profile": [
+        "order_identity",
+        "execution_identity",
+        "execution_timestamp",
+        "execution_artifact"
+      ],
+      "target_rate_per_sec": 15,
+      "payload_bytes_target": 8192
+    }
+  ]
+}

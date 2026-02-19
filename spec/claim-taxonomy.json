@@ -1,0 +1,51 @@
+{
+  "version": "0.1.0",
+  "product_language": {
+    "preferred_phrase": "zero-trust compute verification with trust-scoped data provenance",
+    "avoid_phrase_for_guarantees": "irrefutable"
+  },
+  "claim_types": {
+    "ORDER_PLACED": {
+      "description": "Proves an order placement attempt was accepted by venue-defined authoritative acceptance artifacts.",
+      "required_evidence_tags_all": [
+        "order_identity",
+        "submission_timestamp",
+        "venue_acceptance_artifact"
+      ],
+      "disallowed_inferences": [
+        "fill_price",
+        "fill_quantity",
+        "settlement_finality"
+      ]
+    },
+    "TRADE_EXECUTED": {
+      "description": "Proves an order was executed/fill-confirmed by authoritative execution artifacts for the venue.",
+      "required_evidence_tags_all": [
+        "order_identity",
+        "execution_identity",
+        "execution_timestamp",
+        "execution_artifact"
+      ],
+      "disallowed_inferences": [
+        "position_pnl",
+        "strategy_intent"
+      ]
+    }
+  },
+  "receipt_status": [
+    "PENDING",
+    "PROVED",
+    "NON_PROVABLE",
+    "INVALIDATED"
+  ],
+  "non_provable_reason_codes": [
+    "EVIDENCE_MISSING",
+    "EVIDENCE_CONFLICT",
+    "SOURCE_UNAVAILABLE",
+    "FINALITY_TIMEOUT",
+    "POLICY_VIOLATION",
+    "SCHEMA_INVALID",
+    "UNSUPPORTED_VENUE_CLAIM",
+    "PROOF_FAILURE"
+  ]
+}

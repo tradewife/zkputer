@@ -1,0 +1,22 @@
+zkputer trust model (v0.1.0)
+
+1) What is zero-trust
+- zk proof verification of computation integrity:
+  "Given public inputs and a fixed circuit/version/key, this output was produced correctly."
+
+2) What is trust-scoped
+- Data provenance and source authenticity:
+  Evidence can come from chain state, signed venue attestations, or unsigned APIs.
+- Finality assumptions:
+  Some venues/chains require confirmation windows or may reorg/rollback.
+- Operational integrity:
+  Key custody, build provenance, dependency integrity, and incident response.
+
+3) Product language guardrail
+- Preferred phrase:
+  "Zero-trust compute verification with trust-scoped data provenance."
+- Avoid absolute guarantee wording in legal/contractual text until policies and controls are complete.
+
+4) Failure behavior
+- Never fail-open on missing/conflicting evidence.
+- Emit NON_PROVABLE with reason code and provenance diagnostics.

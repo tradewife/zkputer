@@ -1,0 +1,64 @@
+{
+  "version": "0.1.0",
+  "design_principles": [
+    "execution path is non-blocking",
+    "proof generation is asynchronous",
+    "conflicts fail closed to NON_PROVABLE"
+  ],
+  "states": [
+    "EXECUTION_SUBMITTED",
+    "EXECUTION_ACKED",
+    "EVIDENCE_COLLECTING",
+    "PROOF_PENDING",
+    "PROVED",
+    "NON_PROVABLE",
+    "INVALIDATED"
+  ],
+  "transitions": [
+    {
+      "from": "EXECUTION_SUBMITTED",
+      "to": "EXECUTION_ACKED",
+      "condition": "venue returns acceptance or immediate tx/hash evidence"
+    },
+    {
+      "from": "EXECUTION_ACKED",
+      "to": "EVIDENCE_COLLECTING",
+      "condition": "asynchronous collector begins provenance gathering"
+    },
+    {
+      "from": "EVIDENCE_COLLECTING",
+      "to": "PROOF_PENDING",
+      "condition": "minimum evidence policy for claim type passes"
+    },
+    {
+      "from": "EVIDENCE_COLLECTING",
+      "to": "NON_PROVABLE",
+      "condition": "missing/conflicting evidence or source timeout"
+    },
+    {
+      "from": "PROOF_PENDING",
+      "to": "PROVED",
+      "condition": "proof verifies under active verifier key and policy"
+    },
+    {
+      "from": "PROOF_PENDING",
+      "to": "NON_PROVABLE",
+      "condition": "proof generation/verification failure"
+    },
+    {
+      "from": "PROVED",
+      "to": "INVALIDATED",
+      "condition": "finality rollback/reorg or policy revocation"
+    }
+  ],
+  "status_update_contract": {
+    "required_fields": [
+      "receipt_id",
+      "previous_state",
+      "new_state",
+      "reason_code",
+      "timestamp"
+    ],
+    "reason_code_nullable": true
+  }
+}
