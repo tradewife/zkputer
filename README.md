@@ -1,4 +1,5 @@
 zkputer v2: zkVM Tool Call Provider for Autonomous Agents
+
 In Development: zkputer v2 evolves the sovereign shadow trader into a drop-in zkVM tool call provider, empowering autonomous AI agents with verifiable execution. Agents invoke zkputer.prove(guest_elf, public_inputs) to generate tamper-proof ZKReceipts in seconds, cryptographically attesting advanced trading strategies (TWAP, trailing stops, ladders) across venues like Hyperliquid, Polymarket, Bankr (Base), and Jupiter (Solana) – all without exposing sensitive logic.
 
 Core Pivot from v1: Building on Zypherpunk Hackathon traction (4th place, $4k NEAR Intents tier), v2 narrows to one mission: provably safe agent actions. No more ghost orders or policy drift; replace trust-based polling with on-demand Bonsai proofs for compliance, risk, and orders.
