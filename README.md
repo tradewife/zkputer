@@ -100,10 +100,10 @@ Canonical trust docs:
 - Optional: batched onchain anchoring for public auditability and composability.
 
 ## MVP runtime profile (lean prototype)
-- Proving backend for MVP: SP1 only.
+- Proving backend for MVP: SP1 primary with optional Pico fallback.
 - Proving infrastructure: Boundless cloud.
+- Runtime strategy selector: `ZKPUTER_PROVER_STRATEGY=sp1|pico|sp1_with_pico_fallback` (default: `sp1`).
 - No independent RPC cross-checking in MVP path (kept in roadmap for trust hardening).
-- Pico fallback is roadmap, not in MVP runtime.
 
 ## Monetization direction
 - Metered verification tool-call usage
@@ -160,6 +160,8 @@ Primary integration surface is MCP.
 
 - Start server: `cargo run --bin mcp_server`
 - Exposed tools:
+  - `zkputer_list_templates`
+  - `zkputer_verify_template`
   - `zkputer_verify_claim`
   - `zkputer_get_receipt`
 
@@ -171,4 +173,5 @@ Provided integration examples:
 
 Notes:
 - OpenClaw integration is plugin-first for tool registration.
-- Skills can be layered later for behavior guidance, but MCP/tool surfaces are the execution interface.
+- Template-first flow is recommended for agents: list templates, verify by template, then fetch receipt if needed.
+- zkputer skill template for agents: `integrations/skills/zkputer/skill.md`

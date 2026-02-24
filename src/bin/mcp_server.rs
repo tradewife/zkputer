@@ -8,8 +8,10 @@ use tokio::runtime::Runtime;
 use zkputer::adapters::{SyntheticVenueAdapter, VenueAdapter};
 use zkputer::models::{ClaimType, ProofRequest, Venue};
 use zkputer::policy::PolicyEngine;
+use zkputer::prover::{build_mvp_prover, ProverStrategy};
+use zkputer::templates::{build_request_from_template, list_verification_templates, template_ids};
 use zkputer::verifier::OffchainVerifier;
-use zkputer::{ReceiptEngine, Sp1MvpProver};
+use zkputer::ReceiptEngine;
 
 #[derive(Debug, Deserialize)]
 struct JsonRpcRequest {
@@ -66,6 +68,8 @@ fn main() -> Result<()> {
 }
 
 async fn build_engine() -> Result<ReceiptEngine> {
+    let prover_strategy_env = std::env::var("ZKPUTER_PROVER_STRATEGY").ok();
+    let prover_strategy = ProverStrategy::from_env(prover_strategy_env.as_deref());
     let adapters: Vec<Arc<dyn VenueAdapter>> = vec![
         Arc::new(SyntheticVenueAdapter::new(Venue::Hyperliquid)),
         Arc::new(SyntheticVenueAdapter::new(Venue::Base)),
@@ -75,7 +79,7 @@ async fn build_engine() -> Result<ReceiptEngine> {
     let engine = ReceiptEngine::new(
         adapters,
         PolicyEngine::new(None)?,
-        Arc::new(Sp1MvpProver),
+        build_mvp_prover(prover_strategy),
         OffchainVerifier::default(),
     );
     Ok(engine)
@@ -96,6 +100,30 @@ fn handle_request(runtime: &Runtime, engine: &ReceiptEngine, request: JsonRpcReq
         "ping" => Ok(json!({})),
         "tools/list" => Ok(json!({
             "tools": [
+                {
+                    "name": "zkputer_list_templates",
+                    "description": "List hardened zkputer verification templates for agent usage.",
+                    "inputSchema": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {}
+                    }
+                },
+                {
+                    "name": "zkputer_verify_template",
+                    "description": "Submit verification via a hardened zkputer template and optionally wait for receipt completion.",
+                    "inputSchema": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                            "template_id": { "type": "string", "enum": template_ids() },
+                            "template_args": { "type": "object" },
+                            "wait_for_result": { "type": "boolean", "default": true },
+                            "wait_timeout_ms": { "type": "integer", "default": 3000 }
+                        },
+                        "required": ["template_id", "template_args"]
+                    }
+                },
                 {
                     "name": "zkputer_verify_claim",
                     "description": "Submit a verification request and optionally wait for a receipt.",
@@ -154,6 +182,43 @@ fn handle_request(runtime: &Runtime, engine: &ReceiptEngine, request: JsonRpcReq
     }
 }
 
+fn parse_wait_options(arguments: &Value) -> (bool, u64) {
+    let wait_for_result = arguments
+        .get("wait_for_result")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let wait_timeout_ms = arguments
+        .get("wait_timeout_ms")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(3000);
+    (wait_for_result, wait_timeout_ms)
+}
+
+fn submit_and_render_receipt(
+    runtime: &Runtime,
+    engine: &ReceiptEngine,
+    request: ProofRequest,
+    wait_for_result: bool,
+    wait_timeout_ms: u64,
+) -> Result<Value> {
+    let receipt_id = runtime.block_on(engine.submit(request))?;
+    let receipt = if wait_for_result {
+        runtime.block_on(engine.wait_for_receipt(&receipt_id, Duration::from_millis(wait_timeout_ms)))?
+    } else {
+        runtime
+            .block_on(engine.get_receipt(&receipt_id))
+            .ok_or_else(|| anyhow!("receipt not found after submit"))?
+    };
+    let payload = serde_json::to_value(&receipt)?;
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": serde_json::to_string_pretty(&payload)?
+        }],
+        "structuredContent": payload
+    }))
+}
+
 fn handle_tool_call(runtime: &Runtime, engine: &ReceiptEngine, params: &Value) -> Result<Value> {
     let name = params
         .get("name")
@@ -162,6 +227,29 @@ fn handle_tool_call(runtime: &Runtime, engine: &ReceiptEngine, params: &Value) -
     let arguments = params.get("arguments").cloned().unwrap_or_else(|| json!({}));
 
     match name {
+        "zkputer_list_templates" => {
+            let templates_payload = serde_json::to_value(list_verification_templates())?;
+            Ok(json!({
+                "content": [{
+                    "type": "text",
+                    "text": serde_json::to_string_pretty(&templates_payload)?
+                }],
+                "structuredContent": templates_payload
+            }))
+        }
+        "zkputer_verify_template" => {
+            let template_id = arguments
+                .get("template_id")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| anyhow!("template_id is required"))?;
+            let template_args = arguments
+                .get("template_args")
+                .cloned()
+                .ok_or_else(|| anyhow!("template_args is required"))?;
+            let (wait_for_result, wait_timeout_ms) = parse_wait_options(&arguments);
+            let request = build_request_from_template(template_id, &template_args)?;
+            submit_and_render_receipt(runtime, engine, request, wait_for_result, wait_timeout_ms)
+        }
         "zkputer_verify_claim" => {
             let venue = parse_venue(arguments.get("venue").and_then(|v| v.as_str()))
                 .ok_or_else(|| anyhow!("invalid venue"))?;
@@ -181,14 +269,7 @@ fn handle_tool_call(runtime: &Runtime, engine: &ReceiptEngine, params: &Value) -
                 .get("execution_ref")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
-            let wait_for_result = arguments
-                .get("wait_for_result")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(true);
-            let wait_timeout_ms = arguments
-                .get("wait_timeout_ms")
-                .and_then(|v| v.as_u64())
-                .unwrap_or(3000);
+            let (wait_for_result, wait_timeout_ms) = parse_wait_options(&arguments);
 
             let request = ProofRequest {
                 venue,
@@ -198,25 +279,7 @@ fn handle_tool_call(runtime: &Runtime, engine: &ReceiptEngine, params: &Value) -
                 execution_ref,
                 payload: json!({}),
             };
-            let receipt_id = runtime.block_on(engine.submit(request))?;
-            let receipt = if wait_for_result {
-                runtime.block_on(engine.wait_for_receipt(
-                    &receipt_id,
-                    Duration::from_millis(wait_timeout_ms),
-                ))?
-            } else {
-                runtime
-                    .block_on(engine.get_receipt(&receipt_id))
-                    .ok_or_else(|| anyhow!("receipt not found after submit"))?
-            };
-            let payload = serde_json::to_value(&receipt)?;
-            Ok(json!({
-                "content": [{
-                    "type": "text",
-                    "text": serde_json::to_string_pretty(&payload)?
-                }],
-                "structuredContent": payload
-            }))
+            submit_and_render_receipt(runtime, engine, request, wait_for_result, wait_timeout_ms)
         }
         "zkputer_get_receipt" => {
             let receipt_id = arguments

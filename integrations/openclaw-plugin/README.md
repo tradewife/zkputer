@@ -1,5 +1,5 @@
 # OpenClaw plugin integration (MVP)
-This plugin registers `zkputer_verify_claim` and `zkputer_get_receipt` tools and proxies tool calls to the Rust MCP server over stdio.
+This plugin registers template-first `zkputer_*` tools and proxies tool calls to the Rust MCP server over stdio.
 
 ## Install locally
 Install from this directory using your OpenClaw-compatible plugin install command.
@@ -27,6 +27,11 @@ For reliability, set explicit config in your plugin settings.
 ```
 
 ## Tool contract
+- `zkputer_list_templates`
+  - no required args
+- `zkputer_verify_template`
+  - required: `template_id`, `template_args`
+  - optional: `wait_for_result`, `wait_timeout_ms`
 - `zkputer_verify_claim`
   - required: `venue`, `claim_type`, `account_ref`, `order_ref`
   - optional: `execution_ref`, `wait_for_result`, `wait_timeout_ms`

@@ -201,10 +201,59 @@ function toToolError(error) {
 export default function (api) {
   const config = defaultMcpConfig(getPluginConfig(api));
   const mcp = new StdioMcpClient(config);
+  const templateIds = ["order_placement_verification", "trade_execution_verification"];
 
   if (typeof api?.onShutdown === "function") {
     api.onShutdown(() => mcp.close());
   }
+  api.registerTool(
+    {
+      name: "zkputer_list_templates",
+      description: "List hardened zkputer verification templates available through the zkputer MCP server.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {}
+      },
+      async execute() {
+        try {
+          const result = await mcp.callTool("zkputer_list_templates", {});
+          return toToolResult(result);
+        } catch (err) {
+          return toToolError(err);
+        }
+      }
+    },
+    { optional: true }
+  );
+
+  api.registerTool(
+    {
+      name: "zkputer_verify_template",
+      description:
+        "Submit verification with a hardened zkputer template and return the resulting receipt payload.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          template_id: { type: "string", enum: templateIds },
+          template_args: { type: "object" },
+          wait_for_result: { type: "boolean" },
+          wait_timeout_ms: { type: "integer" }
+        },
+        required: ["template_id", "template_args"]
+      },
+      async execute(_id, params) {
+        try {
+          const result = await mcp.callTool("zkputer_verify_template", params || {});
+          return toToolResult(result);
+        } catch (err) {
+          return toToolError(err);
+        }
+      }
+    },
+    { optional: true }
+  );
 
   api.registerTool(
     {

@@ -3,12 +3,14 @@ use std::time::Duration;
 use zkputer::adapters::SyntheticVenueAdapter;
 use zkputer::models::{ClaimType, ProofRequest, Venue};
 use zkputer::policy::PolicyEngine;
-use zkputer::prover::Sp1MvpProver;
+use zkputer::prover::{build_mvp_prover, ProverStrategy};
 use zkputer::verifier::OffchainVerifier;
 use zkputer::ReceiptEngine;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let prover_strategy_env = std::env::var("ZKPUTER_PROVER_STRATEGY").ok();
+    let prover_strategy = ProverStrategy::from_env(prover_strategy_env.as_deref());
     let adapters: Vec<Arc<dyn zkputer::adapters::VenueAdapter>> = vec![
         Arc::new(SyntheticVenueAdapter::new(Venue::Hyperliquid)),
         Arc::new(SyntheticVenueAdapter::new(Venue::Base)),
@@ -18,7 +20,7 @@ async fn main() -> anyhow::Result<()> {
     let engine = ReceiptEngine::new(
         adapters,
         PolicyEngine::new(None)?,
-        Arc::new(Sp1MvpProver),
+        build_mvp_prover(prover_strategy),
         OffchainVerifier::default(),
     );
     let request = ProofRequest {
